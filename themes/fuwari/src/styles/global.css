@@ -1,0 +1,7 @@
+/* Keep shared component classes and their @apply consumers in one PostCSS input. */
+@import "./main.css";
+@import "./markdown.css";
+@import "./expressive-code.css";
+@import "./transition.css";
+@import "./scrollbar.css";
+@import "./photoswipe.css";

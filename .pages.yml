@@ -1,0 +1,50 @@
+# 接入 GitHub 后供 Pages CMS 读取；本文件本身不会启动在线管理后台。
+media:
+  input: public/images
+  output: /images
+
+content:
+  - name: posts
+    label: 博客文章
+    type: collection
+    path: src/content/posts
+    format: yaml-frontmatter
+    subfolders: true
+    fields:
+      - name: title
+        label: 标题
+        type: string
+        required: true
+      - name: published
+        label: 发布日期
+        type: date
+        required: true
+        options:
+          format: yyyy-MM-dd
+      - name: description
+        label: 摘要
+        type: text
+      - name: image
+        label: 封面图
+        type: image
+      - name: tags
+        label: 标签
+        type: string
+        list: true
+      - name: category
+        label: 分类
+        type: string
+      - name: draft
+        label: 保存为草稿
+        type: boolean
+        default: true
+      - name: body
+        label: 正文
+        type: rich-text
+        options:
+          format: markdown
+  - name: about
+    label: 关于页面
+    type: file
+    path: src/content/spec/about.md
+    format: raw
