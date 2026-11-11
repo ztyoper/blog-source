@@ -378,6 +378,7 @@ export const ru: Translation = {
 	[Key.seriesPartOf]: "Часть серии",
 	[Key.seriesPart]: "Часть {n}",
 	[Key.seriesThisArticle]: "Эта статья",
+	[Key.seriesChapterArticle]: "Текст главы",
 	[Key.noSeries]: "Пока нет серий",
 
 	// Зашифровано

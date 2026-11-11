@@ -11,11 +11,7 @@ import I18nKey from "@i18n/i18nKey";
 import { i18n } from "@i18n/translation";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
 import "@/styles/banner-post.css";
-import {
-	getRelatedPosts,
-	getSeriesPosts,
-	getSortedPosts,
-} from "@utils/content-utils";
+import { getRelatedPosts, getSortedPosts } from "@utils/content-utils";
 import {
 	getCategoryUrl,
 	getFileDirFromPath,
@@ -49,6 +45,7 @@ import {
 	buildPublisherEntity,
 	toAbsoluteUrl,
 } from "@/utils/schema-utils";
+import { buildSeriesList } from "@/utils/series-navigation";
 import { url } from "@/utils/url-utils";
 
 const showSponsorButton =
@@ -57,6 +54,17 @@ const showPostActionCard = siteConfig.post.share || showSponsorButton;
 
 export async function getStaticPaths() {
 	const blogEntries = await getSortedPosts();
+	const seriesList = buildSeriesList(blogEntries);
+	const seriesByName = new Map(seriesList.map((series) => [series.name, series]));
+	// A knowledge-base outline can change independently of its articles' frontmatter.
+	const seriesKeys = new Map(
+		incrementalBuildEnabled
+			? seriesList.map(({ name, entries }) => [
+					name,
+					createHash("sha256").update(JSON.stringify(entries)).digest("hex"),
+				])
+			: [],
+	);
 	// Frontmatter is shared by navigation, series, related posts and sidebars.
 	// Use a daily boundary for time-sensitive recommendations.
 	const footerFile = "src/config/FooterConfig.html";
@@ -75,6 +83,8 @@ export async function getStaticPaths() {
 		: undefined;
 	return blogEntries.map((entry) => {
 		const slug = removeFileExtension(entry.id);
+		const seriesName = entry.data.series.trim();
+		const seriesKey = seriesKeys.get(seriesName);
 		const contentKey = entry.digest ?? entry.body;
 		// Expressive Code assigns a random ID to each collapsed section.
 		const rendered = siteKey && entry.rendered
@@ -88,11 +98,11 @@ export async function getStaticPaths() {
 			: undefined;
 		return {
 			params: { slug },
-			props: { entry },
+			props: { entry, seriesData: seriesByName.get(seriesName) },
 			...(siteKey && contentKey !== undefined
 				? {
 						cacheKey: createHash("sha256")
-							.update(JSON.stringify([siteKey, contentKey, rendered]))
+							.update(JSON.stringify([siteKey, contentKey, rendered, seriesKey]))
 							.digest("hex"),
 					}
 				: {}),
@@ -100,7 +110,7 @@ export async function getStaticPaths() {
 	});
 }
 
-const { entry } = Astro.props;
+const { entry, seriesData } = Astro.props;
 const editConfig = siteConfig.post.editLink;
 const sourcePath = entry.filePath?.replaceAll("\\", "/").replace(/^\.\//, "");
 const editUrl =
@@ -239,7 +249,6 @@ const jsonLd = {
 };
 
 const relatedPosts = await getRelatedPosts(entry, 5);
-const seriesData = await getSeriesPosts(entry);
 ---
 
 <MainGridLayout
@@ -447,8 +456,7 @@ const seriesData = await getSeriesPosts(entry);
       {
         seriesData && (
           <SeriesNav
-            seriesName={seriesData.seriesName}
-            posts={seriesData.posts}
+            series={seriesData}
             currentPostId={entry.id}
           />
         )

@@ -374,6 +374,7 @@ export const ja: Translation = {
 	[Key.seriesPartOf]: "シリーズの一部",
 	[Key.seriesPart]: "パート {n}",
 	[Key.seriesThisArticle]: "この記事",
+	[Key.seriesChapterArticle]: "章の本文",
 	[Key.noSeries]: "シリーズはありません",
 
 	// 暗号化

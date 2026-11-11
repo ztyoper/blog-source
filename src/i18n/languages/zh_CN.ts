@@ -367,6 +367,7 @@ export const zh_CN: Translation = {
 	[Key.seriesPartOf]: "所属系列",
 	[Key.seriesPart]: "第 {n} 篇",
 	[Key.seriesThisArticle]: "本文",
+	[Key.seriesChapterArticle]: "章节正文",
 	[Key.noSeries]: "暂无系列",
 
 	// 加密

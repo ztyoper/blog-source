@@ -377,6 +377,7 @@ export const en: Translation = {
 	[Key.seriesPartOf]: "Part of series",
 	[Key.seriesPart]: "Part {n}",
 	[Key.seriesThisArticle]: "This article",
+	[Key.seriesChapterArticle]: "Chapter article",
 	[Key.noSeries]: "No series yet",
 
 	// Encrypted

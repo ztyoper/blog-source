@@ -375,6 +375,7 @@ export const ko: Translation = {
 	[Key.seriesPartOf]: "시리즈의 일부",
 	[Key.seriesPart]: "파트 {n}",
 	[Key.seriesThisArticle]: "이 글",
+	[Key.seriesChapterArticle]: "장 본문",
 	[Key.noSeries]: "시리즈가 없습니다",
 
 	// Encrypted

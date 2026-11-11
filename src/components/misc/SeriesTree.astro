@@ -1,0 +1,59 @@
+---
+import { Icon } from "astro-icon/components";
+import I18nKey from "@/i18n/i18nKey";
+import { i18n } from "@/i18n/translation";
+import type { SeriesNode } from "@/utils/series-navigation";
+import { getPostUrlBySlug } from "@/utils/url-utils";
+
+interface Props {
+	entries: SeriesNode[];
+	currentPostId?: string;
+}
+
+const { entries, currentPostId } = Astro.props;
+---
+
+<ul class="flex flex-col gap-0.5">
+  {entries.map((entry) => (
+    <li>
+      {entry.children.length ? (
+        <details>
+          <summary class="series-chapter flex min-h-9 cursor-pointer list-none items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-bold text-90 hover:bg-(--btn-plain-bg-hover)">
+            <Icon
+              name="material-symbols:chevron-right-rounded"
+              aria-hidden="true"
+              class="series-chapter-arrow shrink-0 text-lg text-(--primary)"
+            />
+            <span class="min-w-0 break-words">{entry.title}</span>
+          </summary>
+          <div class="ml-3 border-l border-(--line-divider) pl-2">
+            <Astro.self
+              entries={[{ ...entry, title: i18n(I18nKey.seriesChapterArticle), children: [] }, ...entry.children]}
+              currentPostId={currentPostId}
+            />
+          </div>
+        </details>
+      ) : (
+        <a
+          href={getPostUrlBySlug(entry.id)}
+          aria-current={entry.id === currentPostId ? "page" : undefined}
+          class:list={[
+            "flex min-h-9 items-center gap-2 rounded-lg px-2 py-1.5 text-sm",
+            entry.id === currentPostId
+              ? "bg-(--btn-regular-bg) font-bold text-(--btn-content)"
+              : "text-75 hover:bg-(--btn-plain-bg-hover) hover:text-(--primary)",
+          ]}
+        >
+          <span class="min-w-0 flex-1 break-words">{entry.title}</span>
+          {entry.id === currentPostId && <span class="shrink-0 text-xs">{i18n(I18nKey.seriesThisArticle)}</span>}
+        </a>
+      )}
+    </li>
+  ))}
+</ul>
+
+<style>
+  details[open] > .series-chapter > .series-chapter-arrow {
+    transform: rotate(90deg);
+  }
+</style>

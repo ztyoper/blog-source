@@ -363,6 +363,7 @@ enum I18nKey {
 	seriesPartOf = "seriesPartOf",
 	seriesPart = "seriesPart",
 	seriesThisArticle = "seriesThisArticle",
+	seriesChapterArticle = "seriesChapterArticle",
 	noSeries = "noSeries",
 
 	// 加密
