@@ -1,4 +1,6 @@
 ---
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
 import { render } from "astro:content";
 import Comment from "@components/comment/index.astro";
 import Markdown from "@components/common/Markdown.astro";
@@ -33,6 +35,7 @@ import { licenseConfig } from "@/config/licenseConfig";
 import { profileConfig } from "@/config/profileConfig";
 import { siteConfig } from "@/config/siteConfig";
 import { sponsorConfig } from "@/config/sponsorConfig";
+import { incrementalBuildEnabled } from "@/utils/build-metadata";
 import { formatDateToYYYYMMDD } from "@/utils/date-utils";
 import { getApiUrlList, processCoverImageSync } from "@/utils/image-utils";
 import {
@@ -54,12 +57,35 @@ const showPostActionCard = siteConfig.post.share || showSponsorButton;
 
 export async function getStaticPaths() {
 	const blogEntries = await getSortedPosts();
+	// Frontmatter is shared by navigation, series, related posts and sidebars.
+	// Use a daily boundary for time-sensitive recommendations.
+	const footerFile = "src/config/FooterConfig.html";
+	const siteKey = incrementalBuildEnabled
+		? createHash("sha256")
+				.update(
+					JSON.stringify([
+						new Date().toDateString(),
+						process.version,
+						readFileSync("package.json", "utf8"),
+						existsSync(footerFile) ? readFileSync(footerFile, "utf8") : "",
+						blogEntries.map(({ id, data, filePath }) => [id, filePath, data]),
+					]),
+				)
+				.digest("hex")
+		: undefined;
 	return blogEntries.map((entry) => {
-		// 将 id 转换为 slug（移除扩展名）以匹配路由参数
 		const slug = removeFileExtension(entry.id);
+		const contentKey = entry.digest ?? entry.body;
 		return {
 			params: { slug },
 			props: { entry },
+			...(siteKey && contentKey !== undefined
+				? {
+						cacheKey: createHash("sha256")
+							.update(JSON.stringify([siteKey, contentKey, entry.rendered]))
+							.digest("hex"),
+					}
+				: {}),
 		};
 	});
 }

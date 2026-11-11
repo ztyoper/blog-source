@@ -53,6 +53,8 @@ import { remarkMermaid } from "./src/plugins/remark-mermaid.js";
 import { remarkPlantuml } from "./src/plugins/remark-plantuml.js";
 import { remarkReadingTime } from "./src/plugins/remark-reading-time.mjs";
 import { remarkWikiLink } from "./src/plugins/remark-wiki-link.js";
+import { refreshBuildMetadata } from "./src/plugins/refresh-build-metadata";
+import { incrementalBuildEnabled } from "./src/utils/build-metadata";
 import { collectUsedFontCssVars } from "./src/utils/fontHelper";
 
 if (process.env.NODE_ENV === "development") {
@@ -71,6 +73,7 @@ export default defineConfig({
 
 	base: "/",
 	trailingSlash: "always",
+	experimental: { incrementalBuild: incrementalBuildEnabled },
 
 	// 字体配置 - 只加载实际使用的字体，跳过未引用的以加快构建
 	fonts: (() => {
@@ -117,6 +120,7 @@ export default defineConfig({
 	},
 
 	integrations: [
+		...(incrementalBuildEnabled ? [refreshBuildMetadata()] : []),
 		swup({
 			theme: false,
 			animationClass: "transition-swup-", // see https://swup.js.org/options/#animationselector

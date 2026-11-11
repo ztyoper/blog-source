@@ -6,6 +6,11 @@ import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import type { WidgetComponentConfig } from "@/types/config";
 import {
+	countSiteWords,
+	incrementalBuildEnabled,
+	wordCountPlaceholder,
+} from "@/utils/build-metadata";
+import {
 	getCategoryList,
 	getSortedPosts,
 	getTagList,
@@ -29,29 +34,9 @@ const posts = await getSortedPosts();
 const categories = await getCategoryList();
 const tags = await getTagList();
 
-// 计算总字数
-let totalWords = 0;
-for (const post of posts) {
-	if (post.body) {
-		// 移除代码块和内联代码后计算字数
-		let text = post.body
-			.replace(/```[\s\S]*?```/g, "") // 移除代码块
-			.replace(/`[^`]*`/g, "") // 移除内联代码
-			.replace(/\s+/g, " ") // 合并空白
-			.trim();
-
-		// 分别计算中文字符和英文字符
-		const chineseChars = text.match(/[\u4e00-\u9fa5]/g) || [];
-		const englishChars = text.match(/[a-zA-Z]/g) || [];
-
-		totalWords += chineseChars.length + englishChars.length;
-	}
-}
-
-// 格式化数字（添加千位分隔符）
-function formatNumber(num: number): string {
-	return num.toLocaleString();
-}
+const totalWords = import.meta.env.PROD && incrementalBuildEnabled
+	? wordCountPlaceholder
+	: countSiteWords(posts).toLocaleString();
 
 // 获取「最后活动」时间：取每篇文章 published 与 updated 中较新的那个，再从全站所有文章里取最大值。这样新发文章和修改老文章都会刷新该字段。
 const getActivityDate = (post: (typeof posts)[number]): Date => {
@@ -90,7 +75,6 @@ const stats = [
 		icon: "material-symbols:text-ad-outline-rounded",
 		label: i18n(I18nKey.siteStatsTotalWords),
 		value: totalWords,
-		formatted: true,
 	},
 	{
 		icon: "material-symbols:calendar-clock-outline",
@@ -127,8 +111,9 @@ const stats = [
           <span
             class="text-base font-bold text-neutral-900 dark:text-neutral-100"
             data-stat-id={stat.id}
+            data-firefly-build-value={stat.value === wordCountPlaceholder ? "words" : undefined}
           >
-            {stat.formatted ? formatNumber(stat.value) : stat.value}
+            {stat.value}
           </span>
           {stat.suffix && (
             <span class="ml-1 text-sm text-neutral-500 dark:text-neutral-400">

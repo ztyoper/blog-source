@@ -15,9 +15,10 @@ async function getRawSortedPosts() {
 		if (!a.data.pinned && b.data.pinned) return 1;
 
 		// 如果置顶状态相同，则按发布日期排序
-		const dateA = new Date(a.data.published);
-		const dateB = new Date(b.data.published);
-		return dateA > dateB ? -1 : 1;
+		return (
+			b.data.published.getTime() - a.data.published.getTime() ||
+			a.id.localeCompare(b.id, "en")
+		);
 	});
 	return sorted;
 }
@@ -311,7 +312,9 @@ export async function getRelatedPosts(
 	});
 
 	// 按总分降序排列
-	scored.sort((a, b) => b.totalScore - a.totalScore);
+	scored.sort(
+		(a, b) => b.totalScore - a.totalScore || a.post.id.localeCompare(b.post.id, "en"),
+	);
 
 	// 优先取有标签匹配的
 	const withTagMatch = scored.filter((s) => s.tagMatchScore > 0);
@@ -330,7 +333,8 @@ export async function getRelatedPosts(
 			(a, b) =>
 				b.timeFreshnessScore +
 				b.categoryBonus -
-				(a.timeFreshnessScore + a.categoryBonus),
+				(a.timeFreshnessScore + a.categoryBonus) ||
+				a.post.id.localeCompare(b.post.id, "en"),
 		);
 		for (const s of withoutTagMatch) {
 			if (result.length >= maxCount) break;

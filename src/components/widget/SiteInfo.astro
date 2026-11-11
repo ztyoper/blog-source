@@ -9,6 +9,10 @@ import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import type { WidgetComponentConfig } from "@/types/config";
 import { detectBuildPlatform } from "@/utils/build-platform";
+import {
+	buildTimePlaceholder,
+	incrementalBuildEnabled,
+} from "@/utils/build-metadata";
 import { formatDateI18nWithTime } from "@/utils/date-utils";
 
 interface Props {
@@ -52,7 +56,9 @@ if (pnpmMatch) {
 }
 
 // 构建时间
-const buildTime = formatDateI18nWithTime(new Date());
+const buildTime = import.meta.env.PROD && incrementalBuildEnabled
+	? buildTimePlaceholder
+	: formatDateI18nWithTime(new Date());
 
 // 构建平台检测（使用 ci-info 自动识别 CI 环境）
 const unknownBuildPlatform =
@@ -230,6 +236,7 @@ const detailItems: {
                       { "text-xs": item.fullWidth }
                     ]}
                     title={item.value}
+                    data-firefly-build-value={item.value === buildTimePlaceholder ? "time" : undefined}
                   >
                     {item.value}
                   </span>

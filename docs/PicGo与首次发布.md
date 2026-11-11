@@ -81,6 +81,8 @@ git push
 
 官方参考：https://docs.astro.build/en/guides/deploy/github/
 
+日常发布会复用 GitHub Actions 缓存中的文章页。改标题、分类等共享信息，或改主题和依赖时，相关页面会重新生成。检查与构建并行运行，两项成功后才发布。需要全量重建时，在 **Publish Firefly to GitHub Pages → Run workflow** 中选择 `main`，并勾选 **Re-render every page and replace the build cache**。
+
 ## 6. 接通留言板
 
 Firefly 的导航已有「留言」，页面地址是 `/guestbook/`。使用 Giscus 后，留言保存在 GitHub Discussions，访客通过 GitHub 登录留言。
