@@ -48,7 +48,7 @@ export const siteConfig: SiteConfig = {
 	subtitle: "记录学习、技术与生活",
 
 	// 站点 URL
-	site_url: "http://localhost:4321",
+	site_url: "https://ztyoper.github.io",
 
 	// 站点描述
 	description:

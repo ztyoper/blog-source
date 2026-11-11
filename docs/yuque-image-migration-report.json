@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "migratedAt": "2026-11-11T04:37:35.877Z",
+  "images": 8853,
+  "imageBytes": 1738938032,
+  "changedPosts": 778,
+  "replacedReferences": 9378,
+  "backup": ".tools/backups/r2-migration-2026-11-11T04-37-33-309Z",
+  "origin": "https://pub-ccd5622eabb54b4a81678003778ddce1.r2.dev"
+}
