@@ -76,16 +76,18 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Restore Astro page cache
+      - name: Restore Astro build cache
         if: inputs.full_rebuild != true
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
+            node_modules/.astro/data-store.json
+            node_modules/.astro/firefly-content-key
             node_modules/.astro/incremental-build.json
             node_modules/.astro/dist
-          key: firefly-astro-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: firefly-astro-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
-            firefly-astro-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            firefly-astro-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}-
 
       - name: Build site
         env:
@@ -93,14 +95,16 @@ jobs:
           FIREFLY_FULL_REBUILD: ${{ inputs.full_rebuild && '1' || '0' }}
         run: pnpm run build
 
-      - name: Save Astro page cache
+      - name: Save Astro build cache
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         continue-on-error: true
         with:
           path: |
+            node_modules/.astro/data-store.json
+            node_modules/.astro/firefly-content-key
             node_modules/.astro/incremental-build.json
             node_modules/.astro/dist
-          key: firefly-astro-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: firefly-astro-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Upload generated site
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

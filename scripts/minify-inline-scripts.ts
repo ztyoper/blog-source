@@ -34,7 +34,6 @@ function shouldMinify(attrs: string): boolean {
 }
 
 function minifyInline(code: string, file: string): string {
-	if (!code.trim()) return code;
 	try {
 		const result = transformSync(code, {
 			loader: "js",
@@ -62,6 +61,10 @@ async function main() {
 	let savedBytes = 0;
 	let touchedFiles = 0;
 	let scriptCount = 0;
+	let transforms = 0;
+	let cachedChars = 0;
+	const minifiedScripts = new Map<string, string>();
+	const maxCacheChars = 8_000_000;
 
 	for (const file of htmlFiles) {
 		const html = await fs.readFile(file, "utf-8");
@@ -70,8 +73,17 @@ async function main() {
 		const output = html.replace(
 			SCRIPT_RE,
 			(whole, attrs: string, code: string) => {
-				if (!shouldMinify(attrs)) return whole;
-				const minified = minifyInline(code, file);
+				if (!shouldMinify(attrs) || !code.trim()) return whole;
+				let minified = minifiedScripts.get(code);
+				if (minified === undefined) {
+					minified = minifyInline(code, file);
+					transforms++;
+					const size = code.length + minified.length;
+					if (cachedChars + size <= maxCacheChars) {
+						minifiedScripts.set(code, minified);
+						cachedChars += size;
+					}
+				}
 				if (minified === code) return whole;
 				scriptCount++;
 				fileSaved +=
@@ -90,7 +102,7 @@ async function main() {
 
 	const savedKiB = (savedBytes / 1024).toFixed(1);
 	console.log(
-		`✨ Minified ${scriptCount} inline scripts in ${touchedFiles}/${htmlFiles.length} HTML files, saved ${savedKiB} KiB`,
+		`✨ Minified ${scriptCount} inline scripts in ${touchedFiles}/${htmlFiles.length} HTML files with ${transforms} compression attempts, saved ${savedKiB} KiB`,
 	);
 }
 
