@@ -1,6 +1,6 @@
 # PicGo 图文写作与首次发布
 
-本文对应当前项目 `D:\Desktop\博客`。图片通过 PicGo 上传到 Cloudflare R2，博客源码与发布使用 `ztyoper/ztyoper.github.io`。
+本文对应当前项目 `D:\Desktop\博客`。图片通过 PicGo 上传到 Cloudflare R2，博客源码放在私有 `ztyoper/blog-source`，生成的网站发布到公开 `ztyoper/ztyoper.github.io`。
 
 语雀导入的约 1.6 GiB 原图通过批量工具迁移至 R2；本地备份在 `.tools/backups/yuque-images/`，不随网站发布。迁移记录和恢复方法见 [语雀导入说明](语雀导入说明.md)。
 
@@ -45,43 +45,39 @@ S3 endpoint 用于上传，公开 URL 前缀用于浏览器看图。文章只粘
 
 以后新增文章，可以复制这份 .md，修改文件名、标题、日期、分类、标签和正文。图片仍由 PicGo 上传。
 
-## 4. 发布到重建的仓库
+## 4. 设置私有源码与公开展示仓库
 
-如果愿意公开 Astro 源码和 Markdown，请在 GitHub 新建公开的空仓库 `ztyoper.github.io`。仓库留空，首次推送会用本地 `main` 初始化它。
-
-本地 `main` 已包含语雀导入的提交，`origin` 指向同名仓库地址。正式网址为 `https://ztyoper.github.io`，部署工作流在推送 `main` 时构建并发布 `dist`。
-
-打开仓库的 Settings → Pages，在 Build and deployment → Source 选择 **GitHub Actions**。 [Pages 设置](https://github.com/ztyoper/ztyoper.github.io/settings/pages)
-
-文章准备好后，在项目 PowerShell 里逐行执行。先用 `git diff --cached --stat` 检查即将提交的文件。每条命令成功后再执行下一条。
+1. 在 **blog-source** 的 **Settings → General → Danger Zone → Change repository visibility** 将源码仓库设为 **Private**。确认展示仓库 **`ztyoper.github.io`** 存在且为 **Public**。如果找不到，就以这个准确名称新建一个公开空仓库。 [源码仓库设置](https://github.com/ztyoper/blog-source/settings) · [展示仓库](https://github.com/ztyoper/ztyoper.github.io)
+2. 创建一个 fine-grained personal access token。**Resource owner** 选 `ztyoper`，**Repository access** 选择 **Only select repositories**，只勾选 `ztyoper.github.io`。仓库权限 **Contents** 设为 **Read and write**。 [创建令牌](https://github.com/settings/personal-access-tokens/new)
+3. 在 **blog-source → Settings → Secrets and variables → Actions → New repository secret** 新建 `PAGES_PUBLISH_TOKEN`，把令牌填进 Value。发布作业会从这里读取令牌。 [添加仓库 Secret](https://github.com/ztyoper/blog-source/settings/secrets/actions)
+4. 在项目 PowerShell 检查 `origin` 指向 `https://github.com/ztyoper/blog-source.git`，然后推送本地 `main`。
 
 ```powershell
 Set-Location -LiteralPath 'D:\Desktop\博客'
 git status
 git remote -v
-git add -A
-git diff --cached --stat
-git commit -m "feat: prepare Firefly blog for GitHub Pages"
 git push -u origin main
 ```
 
-推送后，远程 `main` 会显示 `src`、`public`、`package.json` 等新源码。GitHub Actions 会安装依赖、检查、构建并部署 `dist`。现有 `.gitignore` 已过滤 `node_modules`、`.tools`、`dist` 和本地环境变量文件。已经被 Git 跟踪的文件可用 `git rm --cached -- 文件名` 从下次提交移除并保留本地副本。 [GitHub 忽略文件说明](https://docs.github.com/en/repositories/working-with-files/managing-files/ignoring-files)
+5. 在 **blog-source → Actions** 查看 **Publish Firefly to GitHub Pages**。`build` 负责检查和生成 `dist`，`publish` 将 `dist` 发布到公开仓库的 `gh-pages`。首次运行成功后才会出现这个分支。 [源码仓库 Actions](https://github.com/ztyoper/blog-source/actions)
+6. 在公开仓库 **Settings → Pages → Source** 选择 **Deploy from a branch**，分支选 `gh-pages`，目录选 `/(root)`，保存并等待 Pages 部署。后续源码提交会更新生成分支，编辑入口始终使用源码仓库的 `main`。 [Pages 设置](https://github.com/ztyoper/ztyoper.github.io/settings/pages) · [正式网站](https://ztyoper.github.io/)
 
-在仓库 Actions 页面查看 Deploy to GitHub Pages，等待 build 与 deploy 成功，再访问 https://ztyoper.github.io/。如果推送时要求登录 GitHub，按本机 Git 凭据管理器提示完成，不把 Token 加入 remote URL。
-
-如果提示 non-fast-forward，先执行 `git fetch origin` 检查远程仓库里是否已有提交。
+`gh-pages` 每次发布用新的静态文件快照替换，只保留最新生成提交。`.gitignore` 过滤本地依赖、构建产物、备份和环境变量文件。源码仓库里 `draft: true` 的草稿原文保留在私库，标记为正式发布的文章会出现在公开网站上。
 
 ## 5. 以后日常发布
 
-初始化迁移完成后，文章保存只更新本地；公开网站需要提交和推送：
+手机阅读文章时，点标题附近的 **编辑本文**，登录 GitHub 后直接修改 `blog-source/main` 中的 Markdown。确认改动并提交，等待 Actions 发布。已有 `.md` 可以在源码仓库的 `src/content/posts/` 上传。
+
+电脑编辑前先拉取手机提交的版本，在源码仓库提交并推送。
 
 ```powershell
-git add .
+git pull --ff-only
+git add -- src/content/posts
 git commit -m "docs: publish a new post"
 git push
 ```
 
-图片经 PicGo 上传后已在图床，博客文章则等自动部署成功后上线。任何 draft: true 的文章都不会进入生产页面，但 .md 源文件仍会进入公开仓库；不应将草稿开关当作保密措施。
+图片经 PicGo 上传后即可引用。文章在 GitHub Actions 与 Pages 部署成功后上线。
 
 官方参考：https://docs.astro.build/en/guides/deploy/github/
 

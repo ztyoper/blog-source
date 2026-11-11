@@ -223,6 +223,8 @@ export const siteConfig: SiteConfig = {
 
 	// ── 文章内容页配置 ──────────────────────────────────
 	post: {
+		// 文章编辑入口指向写作仓库，GitHub 负责登录和写入权限。
+		editLink: { repository: "ztyoper/blog-source", branch: "main" },
 		// 提醒框（Admonitions）配置，修改后需要重启开发服务器才能生效
 		// 主题：'github' | 'obsidian' | 'vitepress' | 'docusaurus'，每个主题风格和语法不同，可根据喜好选择
 		rehypeCallouts: {

@@ -65,6 +65,12 @@ export async function getStaticPaths() {
 }
 
 const { entry } = Astro.props;
+const editConfig = siteConfig.post.editLink;
+const sourcePath = entry.filePath?.replaceAll("\\", "/").replace(/^\.\//, "");
+const editUrl =
+	editConfig && sourcePath?.startsWith("src/content/posts/")
+		? `https://github.com/${editConfig.repository}/edit/${encodeURIComponent(editConfig.branch)}/${sourcePath.split("/").map(encodeURIComponent).join("/")}`
+		: undefined;
 const { Content, headings } = await render(entry);
 
 const { remarkPluginFrontmatter } = await render(entry);
@@ -302,6 +308,7 @@ const seriesData = await getSeriesPosts(entry);
                 category={entry.data.category || undefined}
                 tags={entry.data.tags}
                 id={entry.id}
+                editUrl={editUrl}
               />
             </div>
           </div>
@@ -390,6 +397,7 @@ const seriesData = await getSeriesPosts(entry);
               tags={entry.data.tags}
               category={entry.data.category || undefined}
               id={entry.id}
+              editUrl={editUrl}
             />
             {
               !showPostCover && (

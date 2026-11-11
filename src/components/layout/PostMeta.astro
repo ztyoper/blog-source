@@ -29,6 +29,7 @@ export interface Props {
 	showWords?: boolean;
 	showReadingTime?: boolean;
 	variant?: "default" | "cover";
+	editUrl?: string;
 }
 
 const {
@@ -54,6 +55,7 @@ const {
 	showReadingTime = false,
 	password,
 	variant = "default",
+	editUrl,
 } = Astro.props;
 
 const path = customPath || (id ? `/posts/${id}` : "");
@@ -114,6 +116,23 @@ const visibleTags =
         </div>
       )
   }
+
+  {editUrl && (
+    <a
+      href={editUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      class:list={[
+        "inline-flex min-h-9 items-center gap-1 rounded-md px-2 text-sm font-medium transition",
+        variant === "cover"
+          ? "bg-white/15 text-white hover:bg-white/25"
+          : "bg-(--btn-regular-bg) text-(--btn-content) hover:bg-(--btn-regular-bg-hover)",
+      ]}
+    >
+      <Icon name="material-symbols:edit-rounded" class="text-lg" aria-hidden="true" />
+      编辑本文
+    </a>
+  )}
 
   {
     showCategory && (

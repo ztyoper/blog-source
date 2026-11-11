@@ -151,6 +151,7 @@ export type SiteConfig = {
 
 	// 文章内容页配置
 	post: {
+		editLink?: { repository: string; branch: string };
 		// 提醒框（Admonitions）配置
 		rehypeCallouts: {
 			theme: "github" | "obsidian" | "vitepress" | "docusaurus";
