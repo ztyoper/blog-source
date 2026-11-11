@@ -5,6 +5,7 @@ import { getContainerRenderer as getMDXRenderer } from "@astrojs/mdx/container-r
 import { getContainerRenderer as getSvelteRenderer } from "@astrojs/svelte/container-renderer";
 import I18nKey from "@i18n/i18nKey";
 import { i18n } from "@i18n/translation";
+import { getSortedPosts } from "@utils/content-utils";
 import { url } from "@utils/url-utils";
 import { experimental_AstroContainer as AstroContainer } from "astro/container";
 import sanitizeHtml from "sanitize-html";
@@ -137,6 +138,24 @@ export async function renderFeedEntries(
 			),
 			isPasswordProtected: false,
 		});
+	}
+	return entries;
+}
+
+// Both feeds are prerendered in the same build and use the same article data.
+const buildFeedEntries = new Map<boolean, Promise<FeedEntry[]>>();
+
+export function getFeedEntries(includeContent: boolean): Promise<FeedEntry[]> {
+	const load = () =>
+		getSortedPosts().then((posts) =>
+			renderFeedEntries(posts, { includeContent }),
+		);
+	if (!import.meta.env.PROD) return load();
+
+	let entries = buildFeedEntries.get(includeContent);
+	if (!entries) {
+		entries = load();
+		buildFeedEntries.set(includeContent, entries);
 	}
 	return entries;
 }

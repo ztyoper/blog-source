@@ -2,6 +2,7 @@ import { readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AstroIntegration } from "astro";
+import { createInlineScriptMinifier } from "../../scripts/inline-script-minifier";
 import {
 	buildMetadataFile,
 	buildTimePlaceholder,
@@ -38,9 +39,12 @@ export function refreshBuildMetadata(): AstroIntegration {
 					recursive: true,
 					withFileTypes: true,
 				});
+				const minifier = createInlineScriptMinifier();
 				let updated = 0;
+				let pages = 0;
 				for (const entry of entries) {
 					if (!entry.isFile() || !entry.name.endsWith(".html")) continue;
+					pages++;
 					const file = path.join(entry.parentPath, entry.name);
 					const html = await readFile(file, "utf8");
 					const refreshed = html.replace(buildValueSpan, (span) =>
@@ -48,12 +52,13 @@ export function refreshBuildMetadata(): AstroIntegration {
 							.replaceAll(buildTimePlaceholder, () => buildTime)
 							.replaceAll(wordCountPlaceholder, () => wordCount),
 					);
-					if (refreshed === html) continue;
-					await writeFile(file, refreshed);
-					updated++;
+					const output = minifier.rewrite(refreshed, file);
+					if (output !== html) await writeFile(file, output);
+					if (refreshed !== html) updated++;
 				}
 				await unlink(metadataPath);
 				logger.info("Refreshed build metadata in " + updated + " HTML pages.");
+				logger.info(minifier.summary(pages));
 			},
 		},
 	};
