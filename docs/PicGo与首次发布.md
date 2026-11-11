@@ -81,7 +81,7 @@ git push
 
 官方参考：https://docs.astro.build/en/guides/deploy/github/
 
-日常发布会复用 GitHub Actions 缓存中的文章页。改标题、分类等共享信息，或改主题和依赖时，相关页面会重新生成。检查与构建并行运行，两项成功后才发布。需要全量重建时，在 **Publish Firefly to GitHub Pages → Run workflow** 中选择 `main`，并勾选 **Re-render every page and replace the build cache**。
+日常发布会复用 GitHub Actions 缓存中的文章页。跨日首次发布、修改标题或分类等共享信息，以及修改主题和依赖时，会重新生成受影响的文章页。检查与构建并行运行，两项成功后才发布。需要全量重建时，在 **Publish Firefly to GitHub Pages → Run workflow** 中选择 `main`，并勾选 **Re-render every page and replace the build cache**。
 
 ## 6. 接通留言板
 
