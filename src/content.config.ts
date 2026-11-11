@@ -1,4 +1,4 @@
-import { defineCollection } from "astro:content";
+import { defineCollection, reference } from "astro:content";
 import type { CollectionConfig } from "astro/content/config";
 import { glob } from "astro/loaders";
 import { type ZodType, z } from "astro/zod";
@@ -22,6 +22,7 @@ type PostData = {
 	password: string;
 	passwordHint: string;
 	series: string;
+	seriesParent?: { collection: "posts"; id: string };
 	seriesOrder?: number;
 	prevTitle: string;
 	prevSlug: string;
@@ -80,6 +81,7 @@ const postsCollection: ContentCollection<PostData> = defineCollection({
 		password: z.string().optional().default(""),
 		passwordHint: z.string().optional().default(""),
 		series: z.string().optional().default(""),
+		seriesParent: reference("posts").optional(),
 		seriesOrder: z.number().optional(),
 
 		/* For internal use */

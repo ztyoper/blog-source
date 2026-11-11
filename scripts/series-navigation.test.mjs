@@ -9,41 +9,57 @@ function post(id, title, seriesOrder, published = "2025-05-19") {
 	};
 }
 
-test("reuses the knowledge-base outline for chapters, lessons, and introductory posts", () => {
-	const base = "yuque/im/";
-	const [series] = buildSeriesList([
-		post(`${base}2`, "First lesson", 60),
-		post(`${base}3`, "Second lesson", 1),
-		post(`${base}1`, "Architecture", 70),
-		post(`${base}0`, "Introduction", 99),
-		post(`${base}4`, "New note", 0),
-		{
-			...post(`${base}overview`, "Outline"),
-			body: `# IM
+function child(id, title, seriesOrder, parent) {
+	const entry = post(id, title, seriesOrder);
+	entry.data.seriesParent = { collection: "posts", id: parent };
+	return entry;
+}
 
-- [Introduction](/posts/yuque/im/0/)
-- [Architecture](/posts/yuque/im/1/)
-  - [First lesson](/posts/yuque/im/2/)
-  - [Second lesson](/posts/yuque/im/3/)
-  - [Draft lesson](/posts/yuque/im/5/)
-- [Duplicate link](/posts/yuque/im/2/)
-`,
-			data: { ...post("", "Outline").data, series: "" },
-		},
+test("builds nested chapters and sorts each sibling group without an overview", () => {
+	const [series] = buildSeriesList([
+		child("im/second", "Second lesson", 2, "im/architecture"),
+		child("im/example", "Example", 1, "im/first"),
+		post("im/architecture", "Architecture", 2),
+		child("im/first", "First lesson", 1, "im/architecture"),
+		post("im/intro", "Introduction", 1),
 	]);
 	assert.equal(series.count, 5);
 	assert.deepEqual(series.entries, [
-		{ id: `${base}0`, title: "Introduction", children: [] },
+		{ id: "im/intro", title: "Introduction", children: [] },
 		{
-			id: `${base}1`,
+			id: "im/architecture",
 			title: "Architecture",
 			children: [
-				{ id: `${base}2`, title: "First lesson", children: [] },
-				{ id: `${base}3`, title: "Second lesson", children: [] },
+				{
+					id: "im/first",
+					title: "First lesson",
+					children: [{ id: "im/example", title: "Example", children: [] }],
+				},
+				{ id: "im/second", title: "Second lesson", children: [] },
 			],
 		},
-		{ id: `${base}4`, title: "New note", children: [] },
 	]);
+});
+
+test("keeps lessons accessible when a parent is missing, cross-series or cyclic", () => {
+	const other = post("other", "Other series", 1);
+	other.data.series = "Other";
+	const [series] = buildSeriesList([
+		child("standalone", "Standalone lesson", 1, "unpublished"),
+		child("cross", "Cross-series lesson", 2, "other"),
+		child("a", "Cycle start", 3, "b"),
+		child("b", "Cycle end", 4, "a"),
+		child("self", "Self reference", 5, "self"),
+		other,
+	]);
+	assert.deepEqual(series.entries.map(({ id }) => id), [
+		"standalone",
+		"cross",
+		"self",
+		"a",
+	]);
+	assert.deepEqual(series.entries[3].children.map(({ id }) => id), ["b"]);
+	assert.deepEqual(series.entries[3].children[0].children, []);
 });
 
 test("orders manual series by explicit position, then by publication date and title", () => {

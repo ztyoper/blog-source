@@ -56,7 +56,7 @@ export async function getStaticPaths() {
 	const blogEntries = await getSortedPosts();
 	const seriesList = buildSeriesList(blogEntries);
 	const seriesByName = new Map(seriesList.map((series) => [series.name, series]));
-	// A knowledge-base outline can change independently of its articles' frontmatter.
+	// Include the resolved series navigation in each article's build cache key.
 	const seriesKeys = new Map(
 		incrementalBuildEnabled
 			? seriesList.map(({ name, entries }) => [

@@ -1,17 +1,6 @@
-import type { List } from "mdast";
-import { fromMarkdown } from "mdast-util-from-markdown";
+import type { CollectionEntry } from "astro:content";
 
-type SeriesPost = {
-	id: string;
-	body?: string;
-	data: {
-		title: string;
-		published: Date;
-		series: string;
-		seriesOrder?: number;
-	};
-};
-
+type SeriesPost = Pick<CollectionEntry<"posts">, "id" | "data">;
 export type SeriesNode = { id: string; title: string; children: SeriesNode[] };
 export type Series = { name: string; count: number; entries: SeriesNode[] };
 
@@ -26,33 +15,39 @@ function compareSeriesPosts(a: SeriesPost, b: SeriesPost): number {
 	);
 }
 
-function readOutline(
-	list: List,
-	remaining: Map<string, SeriesPost>,
-): SeriesNode[] {
-	return list.children.flatMap((item) => {
-		const paragraph = item.children.find((child) => child.type === "paragraph");
-		const link = paragraph?.children.find((child) => child.type === "link");
-		const id = link?.url.match(/^\/posts\/(.+?)\/?$/)?.[1];
-		const post = id ? remaining.get(id) : undefined;
-		if (post) remaining.delete(post.id);
+function buildSeriesTree(posts: SeriesPost[]): SeriesNode[] {
+	posts.sort(compareSeriesPosts);
+	const ids = new Set(posts.map(({ id }) => id));
+	const byParent = new Map<string | undefined, SeriesPost[]>();
+	for (const post of posts) {
+		const parentId = post.data.seriesParent?.id;
+		const parent =
+			parentId && parentId !== post.id && ids.has(parentId)
+				? parentId
+				: undefined;
+		const siblings = byParent.get(parent);
+		if (siblings) siblings.push(post);
+		else byParent.set(parent, [post]);
+	}
 
-		const children = item.children.flatMap((child) =>
-			child.type === "list" ? readOutline(child, remaining) : [],
-		);
-		// Keep published lessons accessible if their chapter article is missing or a draft.
-		return post
-			? [{ id: post.id, title: post.data.title, children }]
-			: children;
-	});
+	const visited = new Set<string>();
+	function visit({ id, data }: SeriesPost): SeriesNode[] {
+		if (visited.has(id)) return [];
+		visited.add(id);
+		return [
+			{ id, title: data.title, children: (byParent.get(id) ?? []).flatMap(visit) },
+		];
+	}
+
+	const entries = (byParent.get(undefined) ?? []).flatMap(visit);
+	// A cycle has no root. Keep its posts reachable and stop at the repeated edge.
+	entries.push(...posts.flatMap(visit));
+	return entries;
 }
 
 export function buildSeriesList(posts: readonly SeriesPost[]): Series[] {
 	const groups = new Map<string, SeriesPost[]>();
-	const overviews = new Map<string, string>();
 	for (const post of posts) {
-		const book = post.id.match(/^yuque\/([^/]+)\/overview$/)?.[1];
-		if (book && post.body) overviews.set(book, post.body);
 		const name = post.data.series.trim();
 		if (!name) continue;
 		const group = groups.get(name);
@@ -60,30 +55,11 @@ export function buildSeriesList(posts: readonly SeriesPost[]): Series[] {
 		else groups.set(name, [post]);
 	}
 
-	const seriesList = Array.from(groups, ([name, group]) => {
-		const remaining = new Map(group.map((post) => [post.id, post]));
-		const books = new Set(
-			group.map(({ id }) => id.match(/^yuque\/([^/]+)\//)?.[1]),
-		);
-		const entries: SeriesNode[] = [];
-		for (const book of books) {
-			const overview = book ? overviews.get(book) : undefined;
-			if (!overview) continue;
-			for (const node of fromMarkdown(overview).children) {
-				if (node.type === "list") entries.push(...readOutline(node, remaining));
-			}
-		}
-
-		const unlisted = [...remaining.values()].sort(compareSeriesPosts);
-		entries.push(
-			...unlisted.map(({ id, data }) => ({
-				id,
-				title: data.title,
-				children: [],
-			})),
-		);
-		return { name, count: group.length, entries };
-	});
+	const seriesList = Array.from(groups, ([name, group]) => ({
+		name,
+		count: group.length,
+		entries: buildSeriesTree(group),
+	}));
 	return seriesList.sort(
 		(a, b) => b.count - a.count || a.name.localeCompare(b.name),
 	);

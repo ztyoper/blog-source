@@ -214,6 +214,51 @@ test("imports every reported ID, dates, library navigation and deduplicated imag
 	assert.ok(!fs.existsSync(path.join(f.projectRoot, ".yuque-source")));
 });
 
+test("imports sibling order and parent references from the knowledge-base outline", async (t) => {
+	const f = fixture(t);
+	const book = path.join(f.sourceRoot, "Java");
+	const reportFile = path.join(book, "导出报告.json");
+	const source = JSON.parse(fs.readFileSync(reportFile, "utf8"));
+	source.expected_docs = 5;
+	for (const [id, name] of [
+		[102, "第一章"],
+		[103, "第一节"],
+		[104, "第二节"],
+		[105, "目录外的文章"],
+	]) {
+		const file = `${name}.md`;
+		fs.writeFileSync(path.join(book, file), `# ${name}\n`);
+		source.documents.unshift({ id, path: file, title: name });
+	}
+	fs.writeFileSync(reportFile, JSON.stringify(source));
+	fs.writeFileSync(
+		path.join(book, "00-知识库目录.md"),
+		[
+			"# Java",
+			"",
+			"- [第一章](第一章.md)",
+			"  - [第一节](第一节.md)",
+			"  - [第二节](第二节.md)",
+			"- [重复标题](章节/重复标题.md)",
+			"",
+		].join("\n"),
+	);
+	await importYuque(f);
+	const post = (id) =>
+		fs.readFileSync(
+			path.join(f.projectRoot, `src/content/posts/yuque/java/${id}.md`),
+			"utf8",
+		);
+	assert.match(post(102), /^seriesOrder: 1$/m);
+	assert.doesNotMatch(post(102), /^seriesParent:/m);
+	assert.match(post(103), /^seriesOrder: 1$/m);
+	assert.match(post(103), /^seriesParent: "yuque\/java\/102"$/m);
+	assert.match(post(104), /^seriesOrder: 2$/m);
+	assert.match(post(104), /^seriesParent: "yuque\/java\/102"$/m);
+	assert.match(post(101), /^seriesOrder: 2$/m);
+	assert.match(post(105), /^seriesOrder: 3$/m);
+});
+
 test("idempotent reruns preserve local article edits and fail before copying other outputs", async (t) => {
 	const f = fixture(t);
 	await importYuque(f);

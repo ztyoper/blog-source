@@ -164,6 +164,36 @@ export function rewriteMarkdown(markdown, resolveUrl) {
 	return { markdown: result, rewritten: edits.length };
 }
 
+export function readYuqueSeriesPositions(markdown, postIdsByRoute) {
+	const positions = new Map();
+	const siblingCounts = new Map();
+	function add(route, parent) {
+		const order = (siblingCounts.get(parent) ?? 0) + 1;
+		siblingCounts.set(parent, order);
+		positions.set(route, { order, seriesParent: postIdsByRoute.get(parent) });
+	}
+	function visit(list, parent) {
+		for (const item of list.children) {
+			const paragraph = item.children.find((child) => child.type === "paragraph");
+			const link = paragraph?.children.find((child) => child.type === "link");
+			const route = link?.url;
+			const listed = postIdsByRoute.has(route) && !positions.has(route);
+			if (listed) add(route, parent);
+			for (const node of item.children) {
+				if (node.type === "list") visit(node, listed ? route : parent);
+			}
+		}
+	}
+	for (const node of fromMarkdown(markdown).children) {
+		if (node.type === "list") visit(node, undefined);
+	}
+	// Export reports can include articles outside the outline.
+	for (const route of postIdsByRoute.keys()) {
+		if (!positions.has(route)) add(route, undefined);
+	}
+	return positions;
+}
+
 function bookSlug(name) {
 	return name
 		.replace(
@@ -194,6 +224,7 @@ function header({
 	updated,
 	category,
 	order,
+	seriesParent,
 	pinned = false,
 	description,
 }) {
@@ -209,6 +240,7 @@ function header({
 		...(order
 			? ["series: " + JSON.stringify(category), "seriesOrder: " + order]
 			: []),
+		...(seriesParent ? ["seriesParent: " + JSON.stringify(seriesParent)] : []),
 		...(pinned ? ["pinned: true"] : []),
 		"---",
 		"",
@@ -268,10 +300,11 @@ export async function importYuque({
 			slug,
 			source: dir,
 			count: report.documents.length,
+			postIdsByRoute: new Map(),
 		};
 		books.push(current);
 		const ids = new Set();
-		for (const [index, doc] of report.documents.entries()) {
+		for (const doc of report.documents) {
 			if (!/^\d+$/.test(String(doc.id)) || ids.has(String(doc.id)))
 				throw new Error("Invalid or duplicate document ID");
 			ids.add(String(doc.id));
@@ -280,9 +313,11 @@ export async function importYuque({
 				throw new Error("Non-Markdown source document");
 			if (routes.has(key(source)))
 				throw new Error("Multiple document IDs share one file");
-			const relative = `src/content/posts/yuque/${slug}/${doc.id}.md`;
-			const route = `/posts/yuque/${slug}/${doc.id}/`;
+			const contentId = `yuque/${slug}/${doc.id}`;
+			const relative = `src/content/posts/${contentId}.md`;
+			const route = `/posts/${contentId}/`;
 			routes.set(key(source), route);
+			current.postIdsByRoute.set(route, contentId);
 			const metadataPath = path.join(dir, ".yuque-source", doc.id + ".json");
 			assertNoLinks(sourceRoot, metadataPath);
 			const metadata = fs.existsSync(metadataPath)
@@ -294,7 +329,6 @@ export async function importYuque({
 				source,
 				relative,
 				route,
-				order: index + 1,
 				title: doc.title || metadata.title || path.basename(doc.path, ".md"),
 				published: dateValue(
 					metadata.first_published_at ||
@@ -344,7 +378,7 @@ export async function importYuque({
 	const unresolved = [];
 	const unresolvedKeys = new Set();
 	let rewrittenLinks = 0;
-	const posts = documents.map((doc) => {
+	const rewrittenDocuments = documents.map((doc) => {
 		const original = fs.readFileSync(doc.source, "utf8");
 		const result = rewriteMarkdown(original, (url, kind) => {
 			if (!url || /^(?:[a-z][a-z0-9+.-]*:|\/\/|#)/i.test(url)) return url;
@@ -378,18 +412,38 @@ export async function importYuque({
 				: url;
 		});
 		rewrittenLinks += result.rewritten;
-		const content =
-			header({
-				...doc,
-				category: doc.book,
-				description: doc.navigation
-					? `「${doc.book}」的文档目录。`
-					: `来自「${doc.book}」的学习笔记。`,
-			}) + result.markdown;
 		return {
 			...doc,
 			source: slash(path.relative(sourceRoot, doc.source)),
 			sourceSha256: hash(original),
+			markdown: result.markdown,
+		};
+	});
+	const overviews = new Map(
+		rewrittenDocuments
+			.filter((doc) => doc.navigation)
+			.map((doc) => [doc.book, doc.markdown]),
+	);
+	const seriesPositions = new Map(
+		books.map(({ name, postIdsByRoute }) => [
+			name,
+			readYuqueSeriesPositions(overviews.get(name), postIdsByRoute),
+		]),
+	);
+	const posts = rewrittenDocuments.map(({ markdown, ...doc }) => {
+		const position = seriesPositions.get(doc.book).get(doc.route);
+		const content =
+			header({
+				...doc,
+				...position,
+				category: doc.book,
+				description: doc.navigation
+					? `「${doc.book}」的文档目录。`
+					: `来自「${doc.book}」的学习笔记。`,
+			}) + markdown;
+		return {
+			...doc,
+			...position,
 			content,
 			sha256: hash(content),
 		};
