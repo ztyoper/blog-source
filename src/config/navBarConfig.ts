@@ -15,6 +15,7 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 		LinkPresets.Archive,
 		LinkPresets.Categories,
 		LinkPresets.Tags,
+		LinkPresets.Guestbook,
 		LinkPresets.About,
 	];
 	return { links };

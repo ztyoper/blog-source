@@ -45,33 +45,31 @@ S3 endpoint 用于上传，公开 URL 前缀用于浏览器看图。文章只粘
 
 以后新增文章，可以复制这份 .md，修改文件名、标题、日期、分类、标签和正文。图片仍由 PicGo 上传。
 
-## 4. 原仓库如何替换
+## 4. 发布到重建的仓库
 
-旧仓库 main 当前保存的是已生成的旧网页，包含 2025、archives、css、fancybox、js 和 index.html。当前本地项目保存 Astro 源码。这次以本地新源码文件树替换旧网页文件树，旧文件仍可从 Git 历史找回。
+如果愿意公开 Astro 源码和 Markdown，请在 GitHub 新建公开的空仓库 `ztyoper.github.io`。仓库留空，首次推送会用本地 `main` 初始化它。
 
-已在本地添加 origin 并 fetch 旧 main，尚未提交、合并或推送本次变更。正式网址已设为 https://ztyoper.github.io，base 仍为 /；部署工作流已对齐 main、Node 24 与 pnpm 11.22.0。
+本地 `main` 已包含语雀导入的提交，`origin` 指向同名仓库地址。正式网址为 `https://ztyoper.github.io`，部署工作流在推送 `main` 时构建并发布 `dist`。
 
-先在 https://github.com/ztyoper/ztyoper.github.io/settings/pages 将 Build and deployment → Source 选择 GitHub Actions。当前公共仓库元数据 has_pages 为 false，需完成这一步，不能只上传文件就认为已开通 Pages。
+打开仓库的 Settings → Pages，在 Build and deployment → Source 选择 **GitHub Actions**。 [Pages 设置](https://github.com/ztyoper/ztyoper.github.io/settings/pages)
 
-文章准备好后，在项目 PowerShell 里逐行执行；上一条失败时先处理错误，不要继续：
+文章准备好后，在项目 PowerShell 里逐行执行。先用 `git diff --cached --stat` 检查即将提交的文件。每条命令成功后再执行下一条。
 
 ```powershell
 Set-Location -LiteralPath 'D:\Desktop\博客'
 git status
-git add .
+git remote -v
+git add -A
+git diff --cached --stat
 git commit -m "feat: prepare Firefly blog for GitHub Pages"
-git fetch origin
-git merge -s ours --allow-unrelated-histories origin/main -m "chore: replace legacy blog with Firefly"
 git push -u origin main
 ```
 
-`-s ours` 表示这次合并完整保留本地新博客文件树，同时将旧仓库历史接到父提交中。它是此次迁移的专用步骤，不能替换成 `-X ours`，以后日常更新也不需要重复执行。这里只做普通 push，不使用 --force。
-
-推送后，远程 main 会显示 src、public、package.json 等新源码，旧网页目录从当前分支文件树移除。无需手动删除远程仓库或逐个删除旧文件。上传的是项目源码，GitHub Actions 会安装依赖、检查、构建并部署 dist；node_modules、.tools、dist 和 .env 已被忽略。
+推送后，远程 `main` 会显示 `src`、`public`、`package.json` 等新源码。GitHub Actions 会安装依赖、检查、构建并部署 `dist`。现有 `.gitignore` 已过滤 `node_modules`、`.tools`、`dist` 和本地环境变量文件。已经被 Git 跟踪的文件可用 `git rm --cached -- 文件名` 从下次提交移除并保留本地副本。 [GitHub 忽略文件说明](https://docs.github.com/en/repositories/working-with-files/managing-files/ignoring-files)
 
 在仓库 Actions 页面查看 Deploy to GitHub Pages，等待 build 与 deploy 成功，再访问 https://ztyoper.github.io/。如果推送时要求登录 GitHub，按本机 Git 凭据管理器提示完成，不把 Token 加入 remote URL。
 
-若仍提示 non-fast-forward，说明远程在 fetch 后又有新提交；先检查远程变化，不改用强制推送。
+如果提示 non-fast-forward，先执行 `git fetch origin` 检查远程仓库里是否已有提交。
 
 ## 5. 以后日常发布
 
@@ -86,3 +84,25 @@ git push
 图片经 PicGo 上传后已在图床，博客文章则等自动部署成功后上线。任何 draft: true 的文章都不会进入生产页面，但 .md 源文件仍会进入公开仓库；不应将草稿开关当作保密措施。
 
 官方参考：https://docs.astro.build/en/guides/deploy/github/
+
+## 6. 接通留言板
+
+Firefly 的导航已有「留言」，页面地址是 `/guestbook/`。使用 Giscus 后，留言保存在 GitHub Discussions，访客通过 GitHub 登录留言。
+
+1. 在仓库 Settings → General → Features 勾选 **Discussions**。 [仓库设置](https://github.com/ztyoper/ztyoper.github.io/settings)
+2. 安装 Giscus，仅授权 `ztyoper/ztyoper.github.io`。 [安装 Giscus](https://github.com/apps/giscus)
+3. 在 Giscus 配置页输入 `ztyoper/ztyoper.github.io`，选择 Discussions 分类和 `pathname` 映射。 [生成 Giscus 配置](https://giscus.app/zh-CN)
+4. 将生成的 `data-repo-id`、`data-category` 和 `data-category-id` 分别填到 `src/config/commentConfig.ts` 的 `giscus.repoId`、`giscus.category` 和 `giscus.categoryId`，再将 `type` 设为 `"giscus"`。重建的仓库会有新的 ID。此设置也会启用允许评论的文章的评论区。
+5. 提交并推送配置，在正式站的留言页验证登录和留言。
+
+## 7. 更换 R2 图片域名
+
+在 R2 的桶设置中，将自己的图片域名连接到现有桶。先用新域名打开一张原图，路径继续使用 `/PicGo/原文件名`。 [Cloudflare R2 自定义域名](https://developers.cloudflare.com/r2/buckets/public-buckets/#connect-a-bucket-to-a-custom-domain)
+
+在博客目录执行以下命令，将示例地址换成你的新域名。
+
+```powershell
+.\scripts\package-managers\firefly\pnpm.cmd images:domain https://img.example.com
+```
+
+命令会抽查新域名上的图片内容，备份旧文件，再更新文章直链、图片映射和导入清单。备份保存在 `.tools/backups/`。更新 PicGo 的公开 URL 前缀，让新上传的图片也生成新域名链接。提交和部署博客后，确认线上图片能通过新地址打开，再决定是否关闭旧地址。

@@ -18,7 +18,9 @@ pnpm-debug.log*
 
 # environment variables
 .env
-.env.production
+.env.*
+!.env.example
+!.env.*.example
 
 # macOS-specific files
 .DS_Store
@@ -50,10 +52,3 @@ package/
 
 # Project-local runtime and package managers
 .tools/
-
-# Generated shared-content manifest
-themes/fuwari/.theme-content-manifest.json
-themes/fuwari/src/content/posts/
-themes/fuwari/src/content/spec/about.md
-themes/fuwari/public/images/
-themes/fuwari/public/avatar.svg

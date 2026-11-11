@@ -2,8 +2,6 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { syncThemeContent } from "./theme-content.mjs";
-import { watchSharedContent } from "./theme-watch.mjs";
 
 const projectRoot = path.resolve(
 	path.dirname(fileURLToPath(import.meta.url)),
@@ -12,65 +10,37 @@ const projectRoot = path.resolve(
 const theme = process.argv[2] || "firefly";
 const action = process.argv[3] || "dev";
 if (
-	!["firefly", "fuwari"].includes(theme) ||
+	theme !== "firefly" ||
 	!["dev", "build", "preview", "check", "type-check", "stop"].includes(action)
 ) {
 	throw new Error(
-		"Usage: node scripts/theme-preview.mjs <firefly|fuwari> <dev|build|preview|check|type-check|stop>",
+		"Usage: node scripts/theme-preview.mjs firefly <dev|build|preview|check|type-check|stop>",
 	);
 }
-if (theme === "fuwari" && action === "stop")
-	throw new Error("Stop Fuwari with Ctrl+C in its terminal.");
-const themeRoot =
-	theme === "firefly" ? projectRoot : path.join(projectRoot, "themes/fuwari");
-const packageName = theme === "firefly" ? "pnpm" : "pnpm9";
 const packageManager = path.join(
 	projectRoot,
-	".tools/package-managers/node_modules",
-	packageName,
-	"bin/pnpm.cjs",
+	".tools/package-managers/node_modules/pnpm/bin/pnpm.cjs",
 );
 const packageManagerBin = path.join(
 	projectRoot,
-	"scripts/package-managers",
-	theme,
+	"scripts/package-managers/firefly",
 );
 if (!fs.existsSync(packageManager))
 	throw new Error("Local package manager missing. See the local setup guide.");
-let stopWatching = () => {};
-if (theme === "fuwari") {
-	const sync = () =>
-		syncThemeContent({ sourceRoot: projectRoot, targetRoot: themeRoot });
-	if (action === "dev") {
-		let lastError = "";
-		stopWatching = watchSharedContent({
-			sourceRoot: projectRoot,
-			onChange: () => {
-				try {
-					const result = sync();
-					if (result.copied || result.removed)
-						console.log("Content updated:", result);
-					lastError = "";
-				} catch (error) {
-					if (error.message !== lastError) console.error(error.message);
-					lastError = error.message;
-				}
-			},
-		});
-	}
-	console.log("Shared content:", sync());
-}
 const args =
 	action === "stop"
 		? [packageManager, "dev", "stop"]
 		: [packageManager, action];
 if (action === "dev" || action === "preview") {
-	const port =
-		(theme === "firefly" ? 4321 : 4322) + (action === "preview" ? 2 : 0);
-	args.push("--host", "127.0.0.1", "--port", String(port));
+	args.push(
+		"--host",
+		"127.0.0.1",
+		"--port",
+		action === "preview" ? "4323" : "4321",
+	);
 }
 const child = spawn(process.execPath, args, {
-	cwd: themeRoot,
+	cwd: projectRoot,
 	stdio: "inherit",
 	env: {
 		...process.env,
@@ -88,17 +58,14 @@ const child = spawn(process.execPath, args, {
 	},
 });
 child.on("error", (error) => {
-	stopWatching();
 	console.error(error.message);
 	process.exitCode = 1;
 });
 child.on("exit", (code) => {
-	stopWatching();
 	process.exitCode = code ?? 1;
 });
 for (const signal of ["SIGINT", "SIGTERM"]) {
 	process.on(signal, () => {
-		stopWatching();
 		child.kill(signal);
 	});
 }

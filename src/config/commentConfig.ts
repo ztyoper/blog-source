@@ -54,15 +54,15 @@ export const commentConfig: CommentConfig = {
 	//giscus评论系统配置
 	giscus: {
 		// 设置 Giscus 评论系统仓库
-		repo: "CuteLeaf/Firefly",
-		// 设置 Giscus 评论系统仓库ID
-		repoId: "R_kgD2gfdFGd",
+		repo: "ztyoper/ztyoper.github.io",
+		// 仓库重建后，填写 Giscus 为新仓库生成的 ID。
+		repoId: "",
 		// 设置 Giscus 评论系统分类
 		category: "General",
-		// 获取 Giscus 评论系统分类ID
-		categoryId: "DIC_kwDOKy9HOc4CegmW",
+		// 启用仓库 Discussions 并安装 Giscus 后，粘贴生成的分类 ID。
+		categoryId: "",
 		// 获取 Giscus 评论系统映射方式
-		mapping: "title",
+		mapping: "pathname",
 		// 获取 Giscus 评论系统严格模式
 		strict: "0",
 		// 获取 Giscus 评论系统反应功能

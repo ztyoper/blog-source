@@ -1,5 +1,4 @@
 @import 'tailwindcss';
-@source not '../../themes';
 @source not '../../docs';
 @import './layout-styles.css';
 @import './navbar.css';

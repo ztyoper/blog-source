@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -449,6 +450,116 @@ export function archiveImages(projectRoot = root) {
 	return backup;
 }
 
+export async function switchImageDomain(projectRoot, value, fetcher = fetch) {
+	const url = new URL(value);
+	if (
+		url.protocol !== "https:" ||
+		url.username ||
+		url.password ||
+		url.pathname !== "/" ||
+		url.search ||
+		url.hash
+	)
+		throw new Error("Enter the HTTPS image domain without a path or query");
+	const nextOrigin = url.origin;
+	if (nextOrigin === R2_ORIGIN) return { files: 0, origin: nextOrigin };
+	const hosting = readImageHosting(projectRoot);
+	const entries = Object.values(hosting?.entries ?? {});
+	if (!entries.length) throw new Error("No verified R2 image map found");
+	const escapedOrigin = R2_ORIGIN.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	const pattern = new RegExp(
+		`${escapedOrigin}(?=$|[/#?\\s"'\x60<>()\\]])`,
+		"g",
+	);
+	const paths = execFileSync(
+		"git",
+		[
+			"grep",
+			"-l",
+			"-z",
+			"-I",
+			"-F",
+			"--untracked",
+			"--exclude-standard",
+			"-e",
+			R2_ORIGIN,
+			"--",
+			"src",
+			"docs",
+			"scripts",
+			"本地使用指南.md",
+		],
+		{ cwd: projectRoot, encoding: "utf8" },
+	)
+		.split("\0")
+		.filter(Boolean);
+	const journal = ".tools/r2-migration/verified.ndjson";
+	if (fs.existsSync(safeFile(projectRoot, journal))) paths.push(journal);
+	const changes = [];
+	for (const relative of paths) {
+		const file = safeFile(projectRoot, relative);
+		const before = fs.readFileSync(file, "utf8");
+		const after = before.replace(pattern, nextOrigin);
+		if (after !== before) changes.push({ relative, file, before, after });
+	}
+	const nextHosting = changes.find(
+		(change) => change.relative === HOSTING_FILE,
+	);
+	if (!nextHosting)
+		throw new Error("The image map was not included in the migration");
+	validateHosting(JSON.parse(nextHosting.after), nextOrigin);
+
+	const manifestPath = "docs/yuque-import-manifest.json";
+	const manifestFile = safeFile(projectRoot, manifestPath);
+	const manifestText = fs.readFileSync(manifestFile, "utf8");
+	const manifest = JSON.parse(manifestText);
+	let manifestChanged = false;
+	for (const { relative, before, after } of changes) {
+		if (manifest.files[relative] === hash(before)) {
+			manifest.files[relative] = hash(after);
+			manifestChanged = true;
+		}
+	}
+	if (manifestChanged)
+		changes.push({
+			relative: manifestPath,
+			file: manifestFile,
+			before: manifestText,
+			after: JSON.stringify(manifest, null, 2) + "\n",
+		});
+
+	// Confirm the new address serves the same objects before touching local files.
+	for (const index of new Set([
+		0,
+		Math.floor(entries.length / 2),
+		entries.length - 1,
+	])) {
+		const entry = entries[index];
+		await verifyRemote(entry.url.replace(pattern, nextOrigin), entry, fetcher);
+	}
+	const backup = `.tools/backups/r2-domain-${crypto.randomUUID()}`;
+	for (const { relative, before } of changes) {
+		const saved = safeFile(projectRoot, `${backup}/${relative}`);
+		fs.mkdirSync(path.dirname(saved), { recursive: true });
+		fs.writeFileSync(saved, before, { flag: "wx" });
+	}
+	const written = [];
+	try {
+		for (const change of changes) {
+			if (fs.readFileSync(change.file, "utf8") !== change.before)
+				throw new Error("File changed during migration: " + change.relative);
+			atomicWrite(change.file, change.after);
+			written.push(change);
+		}
+	} catch (error) {
+		for (const { file, before, after } of written.reverse()) {
+			if (fs.readFileSync(file, "utf8") === after) atomicWrite(file, before);
+		}
+		throw new Error(`${error.message}. Backup: ${backup}`, { cause: error });
+	}
+	return { files: changes.length, origin: nextOrigin, backup };
+}
+
 if (
 	process.argv[1] &&
 	path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
@@ -458,9 +569,11 @@ if (
 			await uploadImages(root, Number(process.argv[3]) || Infinity);
 		else if (process.argv[2] === "apply") applyImages();
 		else if (process.argv[2] === "archive") archiveImages();
+		else if (process.argv[2] === "domain")
+			console.log(await switchImageDomain(root, process.argv[3]));
 		else
 			throw new Error(
-				"Usage: node scripts/migrate-yuque-images.mjs upload [limit] | apply | archive",
+				"Usage: node scripts/migrate-yuque-images.mjs upload [limit] | apply | archive | domain <https://img.example.com>",
 			);
 	} catch (error) {
 		console.error(error.message);

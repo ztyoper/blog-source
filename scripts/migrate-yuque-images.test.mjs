@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -9,6 +10,7 @@ import {
 	applyImages,
 	archiveImages,
 	rewriteHostedMarkdown,
+	switchImageDomain,
 	verifyRemote,
 } from "./migrate-yuque-images.mjs";
 
@@ -32,11 +34,62 @@ function mapping() {
 	};
 }
 
+test("switching image domains preserves notes, updates managed hashes and requires a working domain", async (t) => {
+	const root = fs.mkdtempSync(path.join(os.tmpdir(), "r2-migration-test-"));
+	t.after(() => {
+		assert.equal(path.dirname(root), os.tmpdir());
+		assert.ok(path.basename(root).startsWith("r2-migration-test-"));
+		fs.rmSync(root, { recursive: true, force: true });
+	});
+	execFileSync("git", ["init", "--quiet"], { cwd: root });
+	const file = "src/content/posts/example.md";
+	const manifest = "docs/yuque-import-manifest.json";
+	const hosting = "docs/yuque-image-hosting.json";
+	const source = `![说明](${remote}?v=1#part)\n[外站](${origin}.example/a.png)\n`;
+	const newOrigin = "https://img.example.com";
+	const digest = (value) =>
+		crypto.createHash("sha256").update(value).digest("hex");
+	fs.mkdirSync(path.join(root, "src/content/posts"), { recursive: true });
+	fs.mkdirSync(path.join(root, "docs"));
+	fs.writeFileSync(path.join(root, file), source);
+	fs.writeFileSync(path.join(root, hosting), JSON.stringify(mapping()));
+	fs.writeFileSync(
+		path.join(root, manifest),
+		JSON.stringify({ files: { [file]: digest(source) } }),
+	);
+	await assert.rejects(
+		switchImageDomain(root, newOrigin, async () => new Response("wrong")),
+		/mismatch/,
+	);
+	assert.equal(fs.readFileSync(path.join(root, file), "utf8"), source);
+	const result = await switchImageDomain(root, newOrigin, async (url) => {
+		assert.equal(url, remote.replace(origin, newOrigin));
+		return new Response(bytes);
+	});
+	const expected = source.replace(remote, remote.replace(origin, newOrigin));
+	assert.equal(fs.readFileSync(path.join(root, file), "utf8"), expected);
+	assert.equal(
+		fs.readFileSync(path.join(root, result.backup, file), "utf8"),
+		source,
+	);
+	assert.equal(
+		JSON.parse(fs.readFileSync(path.join(root, manifest))).files[file],
+		digest(expected),
+	);
+	assert.equal(
+		validateHosting(
+			JSON.parse(fs.readFileSync(path.join(root, hosting))),
+			newOrigin,
+		).origin,
+		newOrigin,
+	);
+});
+
 test("only verified content-addressed images at the chosen origin are accepted", () => {
 	assert.ok(validateHosting(mapping()));
 	for (const mutate of [
 		(m) => {
-			m.entries[local].url = remote.replace(".r2.dev", ".example.com");
+			m.entries[local].url = remote.replace(origin, "https://wrong.invalid");
 		},
 		(m) => {
 			m.entries[local].sha256 = "0".repeat(64);

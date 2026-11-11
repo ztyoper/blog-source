@@ -5,10 +5,10 @@ export const R2_ORIGIN = "https://pub-ccd5622eabb54b4a81678003778ddce1.r2.dev";
 export const HOSTING_FILE = "docs/yuque-image-hosting.json";
 const localPattern = /^\/images\/yuque\/([a-f0-9]{64})\.[a-z0-9]+$/;
 
-export function validateHosting(data) {
+export function validateHosting(data, expectedOrigin = R2_ORIGIN) {
 	if (
 		data?.version !== 1 ||
-		data.origin !== R2_ORIGIN ||
+		data.origin !== expectedOrigin ||
 		!data.entries ||
 		typeof data.entries !== "object" ||
 		Array.isArray(data.entries)
@@ -22,7 +22,7 @@ export function validateHosting(data) {
 			!Number.isSafeInteger(entry.bytes) ||
 			entry.bytes <= 0 ||
 			!Number.isFinite(Date.parse(entry.verifiedAt)) ||
-			entry.url !== `${R2_ORIGIN}/PicGo/${local.split("/").at(-1)}`
+			entry.url !== `${expectedOrigin}/PicGo/${local.split("/").at(-1)}`
 		)
 			throw new Error("Invalid hosted image entry: " + local);
 	}

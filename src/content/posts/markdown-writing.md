@@ -45,4 +45,4 @@ console.log(message);
 
 ## 文章和草稿
 
-文章开头的 `draft: false` 表示正式发布，改成 `draft: true` 表示草稿。Fuwari 的开发模式会显示草稿，正式构建会隐藏草稿。
+文章开头的 `draft: false` 表示正式发布，改成 `draft: true` 表示草稿。可以在开发模式预览草稿，正式构建只发布非草稿文章。
