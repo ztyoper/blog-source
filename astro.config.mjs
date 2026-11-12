@@ -26,6 +26,7 @@ import remarkAdmonitionToBlockquoteCallout from "remark-admonition-to-blockquote
 import remarkDirective from "remark-directive"; /* Handle directives */
 import remarkMath from "remark-math";
 import remarkSectionize from "remark-sectionize";
+import { R2_ORIGIN } from "./scripts/yuque-image-hosting.mjs";
 import {
 	commentConfig,
 	dynamicConfig,
@@ -36,6 +37,8 @@ import {
 	plantumlConfig,
 	siteConfig,
 } from "./src/config";
+import yuqueImageDimensions from "./src/constants/yuque-image-dimensions.json";
+import yuqueImagePreviews from "./src/constants/yuque-image-previews.json";
 import I18nKey from "./src/i18n/i18nKey";
 import { i18n } from "./src/i18n/translation";
 import { GithubCardComponent } from "./src/plugins/rehype-component-github-card.mjs";
@@ -46,6 +49,7 @@ import rehypeFigure from "./src/plugins/rehype-figure.mjs";
 import rehypeImageReferrerPolicy from "./src/plugins/rehype-image-referrerpolicy.mjs";
 import { rehypeMermaid } from "./src/plugins/rehype-mermaid.mjs";
 import { rehypePlantuml } from "./src/plugins/rehype-plantuml.mjs";
+import rehypeYuqueImages from "./src/plugins/rehype-yuque-images.mjs";
 import { parseDirectiveNode } from "./src/plugins/remark-directive-rehype.js";
 import { remarkExcerpt } from "./src/plugins/remark-excerpt.js";
 import { remarkImageGrid } from "./src/plugins/remark-image-grid.js";
@@ -314,6 +318,14 @@ export default defineConfig({
 				rehypePlantuml,
 				rehypeDiagramPanZoom,
 				rehypeFigure,
+				[
+					rehypeYuqueImages,
+					{
+						origin: R2_ORIGIN,
+						dimensions: yuqueImageDimensions,
+						previews: yuqueImagePreviews,
+					},
+				],
 				[
 					rehypeImageReferrerPolicy,
 					{ domains: siteConfig.imageOptimization?.noReferrerDomains || [] },
