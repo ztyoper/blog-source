@@ -29,11 +29,13 @@ import SharePoster from "@/components/misc/SharePoster.svelte";
 import { coverImageConfig } from "@/config/coverImageConfig";
 import { licenseConfig } from "@/config/licenseConfig";
 import { profileConfig } from "@/config/profileConfig";
+import { sidebarLayoutConfig } from "@/config/sidebarConfig";
 import { siteConfig } from "@/config/siteConfig";
 import { sponsorConfig } from "@/config/sponsorConfig";
 import { incrementalBuildEnabled } from "@/utils/build-metadata";
 import { formatDateToYYYYMMDD } from "@/utils/date-utils";
 import { getApiUrlList, processCoverImageSync } from "@/utils/image-utils";
+import { getPostBuildTimeKey } from "@/utils/post-build-time";
 import {
 	getAuthorAvatarUrl,
 	getSiteLogo,
@@ -53,6 +55,7 @@ const showSponsorButton =
 const showPostActionCard = siteConfig.post.share || showSponsorButton;
 
 export async function getStaticPaths() {
+	const start = performance.now();
 	const blogEntries = await getSortedPosts();
 	const seriesList = buildSeriesList(blogEntries);
 	const seriesByName = new Map(seriesList.map((series) => [series.name, series]));
@@ -66,13 +69,20 @@ export async function getStaticPaths() {
 			: [],
 	);
 	// Frontmatter is shared by navigation, series, related posts and sidebars.
-	// Use a daily boundary for time-sensitive recommendations.
 	const footerFile = "src/config/FooterConfig.html";
+	const adExpiryDates = [
+		...sidebarLayoutConfig.leftComponents,
+		...sidebarLayoutConfig.rightComponents,
+		...(sidebarLayoutConfig.mobileBottomComponents ?? []),
+	].flatMap((widget) => {
+		const expiry = widget.specificConfig?.ad?.expireDate;
+		return widget.enable && expiry ? [expiry] : [];
+	});
 	const siteKey = incrementalBuildEnabled
 		? createHash("sha256")
 				.update(
 					JSON.stringify([
-						new Date().toDateString(),
+						getPostBuildTimeKey(new Date(), adExpiryDates),
 						process.version,
 						readFileSync("package.json", "utf8"),
 						readFileSync("src/plugins/incremental-static-output.ts", "utf8"),
@@ -83,7 +93,7 @@ export async function getStaticPaths() {
 				)
 				.digest("hex")
 		: undefined;
-	return blogEntries.map((entry) => {
+	const articlePaths = blogEntries.map((entry) => {
 		const slug = removeFileExtension(entry.id);
 		const seriesName = entry.data.series.trim();
 		const seriesKey = seriesKeys.get(seriesName);
@@ -110,6 +120,12 @@ export async function getStaticPaths() {
 				: {}),
 		};
 	});
+	if (incrementalBuildEnabled) {
+		console.log(
+			`[FIREFLY] Prepared ${articlePaths.length} article routes in ${Math.round(performance.now() - start)}ms`,
+		);
+	}
+	return articlePaths;
 }
 
 const { entry, seriesData } = Astro.props;
@@ -119,9 +135,7 @@ const editUrl =
 	editConfig && sourcePath?.startsWith("src/content/posts/")
 		? `https://github.com/${editConfig.repository}/edit/${encodeURIComponent(editConfig.branch)}/${sourcePath.split("/").map(encodeURIComponent).join("/")}`
 		: undefined;
-const { Content, headings } = await render(entry);
-
-const { remarkPluginFrontmatter } = await render(entry);
+const { Content, headings, remarkPluginFrontmatter } = await render(entry);
 
 const bannerPostMeta = {
 	title: entry.data.title,

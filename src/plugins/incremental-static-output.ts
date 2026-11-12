@@ -20,6 +20,14 @@ export function incrementalStaticOutput(): AstroIntegration {
 				let htmlPages = 0;
 				setPrerenderer((prerenderer) => ({
 					...prerenderer,
+					async getStaticPaths() {
+						const start = performance.now();
+						const paths = await prerenderer.getStaticPaths();
+						logger.info(
+							`Resolved ${paths.length} static routes in ${Math.round(performance.now() - start)}ms`,
+						);
+						return paths;
+					},
 					async render(request, options) {
 						const result = await prerenderer.render(request, options);
 						const response =

@@ -208,7 +208,11 @@ export async function getRelatedPosts(
 	const currentTags = new Set(currentPost.data.tags || []);
 	const currentTokens = tokenizeTitle(currentPost.data.title);
 	const currentCategory = currentPost.data.category || "";
-	const now = Date.now();
+	// Anchor freshness to the collection so an unchanged ranking can be cached across builds.
+	const newestPublication = candidates.reduce(
+		(latest, post) => Math.max(latest, post.data.published.getTime()),
+		currentPost.data.published.getTime(),
+	);
 
 	const scored = candidates.map((post) => {
 		const postTags = new Set(post.data.tags || []);
@@ -223,7 +227,8 @@ export async function getRelatedPosts(
 
 		// timeFreshnessScore (0-30): 6 个月半衰期
 		const daysSincePublished =
-			(now - new Date(post.data.published).getTime()) / (1000 * 60 * 60 * 24);
+			(newestPublication - post.data.published.getTime()) /
+			(1000 * 60 * 60 * 24);
 		const timeFreshnessScore =
 			30 * Math.exp((-Math.LN2 * daysSincePublished) / 180);
 
