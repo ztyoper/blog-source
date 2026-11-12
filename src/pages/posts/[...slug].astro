@@ -75,6 +75,8 @@ export async function getStaticPaths() {
 						new Date().toDateString(),
 						process.version,
 						readFileSync("package.json", "utf8"),
+						readFileSync("src/plugins/incremental-static-output.ts", "utf8"),
+						readFileSync("scripts/inline-script-minifier.ts", "utf8"),
 						existsSync(footerFile) ? readFileSync(footerFile, "utf8") : "",
 						blogEntries.map(({ id, data, filePath }) => [id, filePath, data]),
 					]),

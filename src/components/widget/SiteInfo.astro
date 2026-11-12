@@ -9,10 +9,7 @@ import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import type { WidgetComponentConfig } from "@/types/config";
 import { detectBuildPlatform } from "@/utils/build-platform";
-import {
-	buildTimePlaceholder,
-	incrementalBuildEnabled,
-} from "@/utils/build-metadata";
+import { incrementalBuildEnabled } from "@/utils/build-metadata";
 import { formatDateI18nWithTime } from "@/utils/date-utils";
 
 interface Props {
@@ -56,8 +53,9 @@ if (pnpmMatch) {
 }
 
 // 构建时间
-const buildTime = import.meta.env.PROD && incrementalBuildEnabled
-	? buildTimePlaceholder
+const sharedBuildValues = import.meta.env.PROD && incrementalBuildEnabled;
+const buildTime = sharedBuildValues
+	? "—"
 	: formatDateI18nWithTime(new Date());
 
 // 构建平台检测（使用 ci-info 自动识别 CI 环境）
@@ -123,6 +121,7 @@ const detailItems: {
 	icon: string;
 	label: string;
 	value: string;
+	buildValue?: "time";
 	fullWidth?: boolean;
 }[] = [
 	{
@@ -155,6 +154,7 @@ const detailItems: {
 		icon: "material-symbols:build-outline",
 		label: i18n(I18nKey.siteInfoBuildTime),
 		value: buildTime,
+		buildValue: sharedBuildValues ? "time" : undefined,
 		fullWidth: true,
 	},
 	{
@@ -219,7 +219,7 @@ const detailItems: {
         <div class="grid grid-cols-2 gap-2">
           {
             detailItems.map(
-              (item: { icon: string; label: string; value: string; fullWidth?: boolean }) => (
+              (item) => (
                 <div class:list={[
                   "flex flex-col items-center gap-1 py-2 px-1 rounded-lg bg-neutral-100/60 dark:bg-neutral-800/50",
                   { "col-span-2": item.fullWidth }
@@ -236,7 +236,7 @@ const detailItems: {
                       { "text-xs": item.fullWidth }
                     ]}
                     title={item.value}
-                    data-firefly-build-value={item.value === buildTimePlaceholder ? "time" : undefined}
+                    data-firefly-build-value={item.buildValue}
                   >
                     {item.value}
                   </span>

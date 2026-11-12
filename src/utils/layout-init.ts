@@ -19,6 +19,7 @@ import { initIconLoader } from "@/utils/icon-loader";
 import { initImageLoadFadeIn } from "@/utils/lqip-utils";
 import { initScroll } from "@/utils/scroll-utils";
 import { initThemeListener, initWallpaperMode } from "@/utils/setting-utils";
+import { initSiteBuildValues } from "@/utils/site-build-values";
 import { setupSwupTransitions } from "@/utils/swup-transitions";
 import { initTouchCodeCopyReveal } from "@/utils/touch-copy-utils";
 
@@ -52,6 +53,7 @@ export function initLayout(): void {
 	]);
 
 	setupSwupTransitions();
+	initSiteBuildValues();
 	initFullscreenWallpaper();
 	registerContentOverflowListeners();
 	// 滚动路径不再读取布局；先在初始化时填充侧边栏 top 容器可见性缓存

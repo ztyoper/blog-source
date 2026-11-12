@@ -24,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ASTRO_TELEMETRY_DISABLED: "1"
+      FIREFLY_INCREMENTAL_BUILD: "1"
       TZ: Asia/Shanghai
     steps:
       - name: Checkout
@@ -41,12 +42,28 @@ jobs:
         with:
           version: 11.22.0
           run_install: false
+          cache: true
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Restore Astro build cache
+        if: inputs.full_rebuild != true
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with: &astro-cache-restore
+          path: &astro-cache-paths |
+            node_modules/.astro/data-store.json
+            node_modules/.astro/firefly-content-key
+            node_modules/.astro/incremental-build.json
+            node_modules/.astro/dist
+            node_modules/.astro/firefly-pagefind
+          key: &astro-cache-key firefly-astro-v4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            firefly-astro-v4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}-
+
       - name: Check Astro and TypeScript
         run: |
+          node --input-type=module -e "import { prepareMarkdownCache } from './scripts/prepare-markdown-cache.mjs'; await prepareMarkdownCache()"
           pnpm check
           pnpm type-check
 
@@ -72,6 +89,7 @@ jobs:
         with:
           version: 11.22.0
           run_install: false
+          cache: true
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -79,15 +97,7 @@ jobs:
       - name: Restore Astro build cache
         if: inputs.full_rebuild != true
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            node_modules/.astro/data-store.json
-            node_modules/.astro/firefly-content-key
-            node_modules/.astro/incremental-build.json
-            node_modules/.astro/dist
-          key: firefly-astro-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: |
-            firefly-astro-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}-
+        with: *astro-cache-restore
 
       - name: Build site
         env:
@@ -99,12 +109,8 @@ jobs:
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         continue-on-error: true
         with:
-          path: |
-            node_modules/.astro/data-store.json
-            node_modules/.astro/firefly-content-key
-            node_modules/.astro/incremental-build.json
-            node_modules/.astro/dist
-          key: firefly-astro-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: *astro-cache-paths
+          key: *astro-cache-key
 
       - name: Upload generated site
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

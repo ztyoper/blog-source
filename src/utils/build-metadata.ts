@@ -2,8 +2,6 @@ export const incrementalBuildEnabled: boolean =
 	process.env.FIREFLY_INCREMENTAL_BUILD === "1" && !process.env.CF_WORKERS;
 
 export const buildMetadataFile = "_firefly-build-metadata.json";
-export const buildTimePlaceholder = "__FIREFLY_BUILD_TIME__";
-export const wordCountPlaceholder = "__FIREFLY_BUILD_WORD_COUNT__";
 
 export function countSiteWords(posts: readonly { body?: string }[]): number {
 	let total = 0;

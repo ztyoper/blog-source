@@ -33,6 +33,7 @@ import {
 } from "@/constants/constants";
 import { defaultFavicons } from "@/constants/icon";
 import type { Favicon } from "@/types/config";
+import { buildMetadataFile, incrementalBuildEnabled } from "@/utils/build-metadata";
 import { isHomePage } from "@/utils/layout-utils";
 import { getAuthorAvatarUrl, getSiteLogo } from "@/utils/schema-image";
 import { buildSiteGraph, toAbsoluteUrl } from "@/utils/schema-utils";
@@ -513,6 +514,7 @@ const ogImageAlt = propsOgImageAlt ?? pageTitle;
   </head>
   <body
     class="min-h-screen"
+    data-firefly-build-metadata={import.meta.env.PROD && incrementalBuildEnabled ? url("/" + buildMetadataFile) : undefined}
     class:list={[
       {
         "is-home": isHomePageCheck,

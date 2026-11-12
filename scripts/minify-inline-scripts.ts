@@ -5,7 +5,7 @@ import { createInlineScriptMinifier } from "./inline-script-minifier";
 import { resolveSiteRoot } from "./site-root";
 
 async function main() {
-	// The incremental Astro build combines this with the metadata refresh.
+	// The incremental prerenderer minifies HTML before Astro caches it.
 	if (incrementalBuildEnabled) return;
 
 	const minifier = createInlineScriptMinifier();

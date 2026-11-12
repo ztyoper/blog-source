@@ -8,7 +8,6 @@ import type { WidgetComponentConfig } from "@/types/config";
 import {
 	countSiteWords,
 	incrementalBuildEnabled,
-	wordCountPlaceholder,
 } from "@/utils/build-metadata";
 import {
 	getCategoryList,
@@ -34,8 +33,9 @@ const posts = await getSortedPosts();
 const categories = await getCategoryList();
 const tags = await getTagList();
 
-const totalWords = import.meta.env.PROD && incrementalBuildEnabled
-	? wordCountPlaceholder
+const sharedBuildValues = import.meta.env.PROD && incrementalBuildEnabled;
+const totalWords = sharedBuildValues
+	? "—"
 	: countSiteWords(posts).toLocaleString();
 
 // 获取「最后活动」时间：取每篇文章 published 与 updated 中较新的那个，再从全站所有文章里取最大值。这样新发文章和修改老文章都会刷新该字段。
@@ -75,6 +75,7 @@ const stats = [
 		icon: "material-symbols:text-ad-outline-rounded",
 		label: i18n(I18nKey.siteStatsTotalWords),
 		value: totalWords,
+		buildValue: sharedBuildValues ? "words" : undefined,
 	},
 	{
 		icon: "material-symbols:calendar-clock-outline",
@@ -111,7 +112,7 @@ const stats = [
           <span
             class="text-base font-bold text-neutral-900 dark:text-neutral-100"
             data-stat-id={stat.id}
-            data-firefly-build-value={stat.value === wordCountPlaceholder ? "words" : undefined}
+            data-firefly-build-value={stat.buildValue}
           >
             {stat.value}
           </span>

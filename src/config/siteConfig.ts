@@ -355,7 +355,7 @@ export const siteConfig: SiteConfig = {
 		// 订阅条目内容模式：
 		// - "full": 包含文章正文全文（默认）
 		// - "summary": 仅包含文章摘要/描述，不含正文，体积更小
-		contentMode: "full",
+		contentMode: "summary",
 	},
 
 	// 站点语言，在本配置文件顶部SITE_LANG定义

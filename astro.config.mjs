@@ -53,7 +53,7 @@ import { remarkMermaid } from "./src/plugins/remark-mermaid.js";
 import { remarkPlantuml } from "./src/plugins/remark-plantuml.js";
 import { remarkReadingTime } from "./src/plugins/remark-reading-time.mjs";
 import { remarkWikiLink } from "./src/plugins/remark-wiki-link.js";
-import { refreshBuildMetadata } from "./src/plugins/refresh-build-metadata";
+import { incrementalStaticOutput } from "./src/plugins/incremental-static-output";
 import { incrementalBuildEnabled } from "./src/utils/build-metadata";
 import { collectUsedFontCssVars } from "./src/utils/fontHelper";
 
@@ -120,7 +120,7 @@ export default defineConfig({
 	},
 
 	integrations: [
-		...(incrementalBuildEnabled ? [refreshBuildMetadata()] : []),
+		...(incrementalBuildEnabled ? [incrementalStaticOutput()] : []),
 		swup({
 			theme: false,
 			animationClass: "transition-swup-", // see https://swup.js.org/options/#animationselector
